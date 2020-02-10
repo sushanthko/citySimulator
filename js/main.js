@@ -1,5 +1,5 @@
 // JavaScript source code
-var camera, scene, renderer;
+var camera, scene, renderer, light;
 var geometry, material, mesh, meshFloor;
 var USE_WIREFRAME = false;
 
@@ -9,7 +9,7 @@ function init() {
     camera.position.set(600, 300, 600);*/
     camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 10000);
     //camera.position.set(-200, 1200, 2400);
-    camera.position.set(0, 2000, 2400);
+    camera.position.set(0, 2000, -2400);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
 
@@ -72,9 +72,15 @@ function init() {
         while (posz < 725) {
             console.log("posz" + posz);
             //var ht = (Math.floor(Math.random() * 2) + 1) * 300;
-            var ht = 600;
-            if ((i + j) % 3 == 0) {
-                ht /= 2;
+            var ht = 300;
+            /*if ((i + j) % 9 == 0) {
+                ht *= 2;
+            }*/
+            if (posx > 400 && posz <400) {
+                ht *= 1.5;
+            }
+            if (posx > 100 && posx < 300 && posz > 200 && posz < 500) {
+                ht *= 2;
             }
             geometry = new THREE.BoxGeometry(75, ht, 75);
             material = new THREE.MeshLambertMaterial({ color: 0xb5b5b5, side: THREE.DoubleSide });
@@ -91,7 +97,7 @@ function init() {
     }
 
     //park
-    geometry = new THREE.BoxGeometry(600, 1, 600);
+    geometry = new THREE.BoxGeometry(550, 1, 650);
     material = new THREE.MeshLambertMaterial({ color: 0x00691c });
     mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(400, 0, -400);
@@ -99,7 +105,7 @@ function init() {
     scene.add(mesh);
 
     //landmark
-    geometry = new THREE.CylinderGeometry(30, 30, 600, 32);
+    geometry = new THREE.CylinderGeometry(20, 20, 600, 32);
     material = new THREE.MeshLambertMaterial({ color: 0xcccccc });
     mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(0, 300, -400);
@@ -141,11 +147,11 @@ function init() {
     //let light = new THREE.AmbientLight(0xffffff, 1);
     scene.add(new THREE.AmbientLight(0x404040));
 
-    var light = new THREE.DirectionalLight(0xffffff, 0.5);
+    light = new THREE.DirectionalLight(0xffffff, 0.5);
     //light.position.set(50, 200, 100);
     //light.position.set(400, 100, 500);
     //light.position.set(0, 200, 800);
-    light.position.set(300, 600, -0);
+    light.position.set(-450, 600, -0);
     //light.position.multiplyScalar(1.3);
 
     light.castShadow = true;
@@ -182,15 +188,36 @@ function init() {
 
 }
 
-function animate() {
+/*function animate() {
 
     requestAnimationFrame(animate);
 
     //mesh.rotation.x += 0.01;
     //mesh.rotation.y += 0.02;
+    if (light.position.x < 450) {
+        light.position.x += 0.05;
+    }
 
     renderer.render(scene, camera);
 
+}*/
+
+function animate() {
+    console.log(runAnim);
+    if (!isPlay) return;
+    requestAnimationFrame(animate);
+    if (light.position.x < 450) {
+        light.position.x += 0.05;
+    }
+    render();
+}
+
+function render() {
+    //mesh.rotation.y = theta;
+    if (!isPlay) {
+        light.position.set(-450, 600, -0);
+    }
+    renderer.render(scene, camera);
 }
 
 function onWindowResize() {
@@ -202,4 +229,67 @@ function onWindowResize() {
 window.addEventListener('resize', onWindowResize, false);
 
 init();
-animate();
+render();
+
+var initAnim = true;
+var runAnim = false;
+var isPlay = false;
+
+var FizzyText = function () {
+    /*this.message = 'dat.gui';
+    this.speed = 0.8;
+    this.displayOutline = false;*/
+    this.start = function () {
+        if (initAnim) {
+            initAnim = false;
+            runAnim = true;
+            //theta = 0;
+        }
+        // Start and Pause 
+        if (runAnim) {
+            //startButton.innerHTML = 'Pause';
+            runAnim = false;
+            isPlay = true;
+            animate();
+        } else {
+            //startButton.innerHTML = 'Restart';
+            runAnim = true;
+            isPlay = false;
+        }
+    };
+    this.reset = function () {
+        // Set StartButton to Start  
+        //startButton.innerHTML = 'Start';
+
+        // Boolean for Stop Animation
+        initAnim = true;
+        runAnim = false;
+        //theta = 0;
+        isPlay = false;
+        render();
+    };
+};
+
+window.onload = function () {
+    var text = new FizzyText();
+    var gui = new dat.GUI();
+    /*gui.add(text, 'message');
+    gui.add(text, 'speed', -5, 5);
+    gui.add(text, 'displayOutline');*/
+    var startBtn = gui.add(text, 'start').name('Start');
+    var resetBtn = gui.add(text, 'reset').name('Reset');
+    startBtn.onChange(function (value) {
+        console.log("test: " + startBtn.__li.firstElementChild.firstElementChild.innerHTML);
+        var value = startBtn.__li.firstElementChild.firstElementChild.innerHTML;
+        // Fires on every change, drag, keypress, etc.
+        if (value == 'Stop') {
+            startBtn.name('Resume');
+        } else {
+            startBtn.name('Stop');
+        }
+    });
+    resetBtn.onChange(function (value) {
+        // Fires on every change, drag, keypress, etc.
+        startBtn.name('Start');
+    });
+};
