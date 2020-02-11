@@ -1,9 +1,16 @@
 // JavaScript source code
-var camera, scene, renderer, light;
+var camera, scene, renderer, light, raycaster;
 var geometry, material, mesh, meshFloor;
 var USE_WIREFRAME = false;
 
 function init() {
+    /*if (scene != undefined) {
+        console.log("scene.test: " + scene.children);
+        while (scene.children.length > 0) {
+            scene.remove(scene.children[0]);
+        }
+        console.log("scene.test: " + scene);
+    }*/
 
     /*camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(600, 300, 600);*/
@@ -100,7 +107,7 @@ function init() {
     geometry = new THREE.BoxGeometry(550, 1, 650);
     material = new THREE.MeshLambertMaterial({ color: 0x00691c });
     mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(400, 0, -400);
+    mesh.position.set(240, 0, -400);
     mesh.receiveShadow = true;
     scene.add(mesh);
 
@@ -108,7 +115,7 @@ function init() {
     geometry = new THREE.CylinderGeometry(20, 20, 600, 32);
     material = new THREE.MeshLambertMaterial({ color: 0xcccccc });
     mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(0, 300, -400);
+    mesh.position.set(600, 300, -400);
     mesh.receiveShadow = true;
     mesh.castShadow = true;
     scene.add(mesh);
@@ -151,7 +158,7 @@ function init() {
     //light.position.set(50, 200, 100);
     //light.position.set(400, 100, 500);
     //light.position.set(0, 200, 800);
-    light.position.set(-450, 600, -0);
+    light.position.set(450, 600, -0);
     //light.position.multiplyScalar(1.3);
 
     light.castShadow = true;
@@ -206,8 +213,8 @@ function animate() {
     console.log(runAnim);
     if (!isPlay) return;
     requestAnimationFrame(animate);
-    if (light.position.x < 450) {
-        light.position.x += 0.05;
+    if (light.position.x > -450) {
+        light.position.x -= 0.05;
     }
     render();
 }
@@ -215,8 +222,9 @@ function animate() {
 function render() {
     //mesh.rotation.y = theta;
     if (!isPlay) {
-        light.position.set(-450, 600, -0);
+        light.position.set(450, 600, -0);
     }
+    //rayCast();
     renderer.render(scene, camera);
 }
 
@@ -234,6 +242,7 @@ render();
 var initAnim = true;
 var runAnim = false;
 var isPlay = false;
+var removeRC = false;
 
 var FizzyText = function () {
     /*this.message = 'dat.gui';
@@ -268,6 +277,16 @@ var FizzyText = function () {
         isPlay = false;
         render();
     };
+    this.compVis = function () {
+        if (!removeRC) {
+            rayCast();
+            render();
+        } else {
+            /*init();
+            render();*/
+            document.location.reload();
+        }
+    };
 };
 
 window.onload = function () {
@@ -278,6 +297,7 @@ window.onload = function () {
     gui.add(text, 'displayOutline');*/
     var startBtn = gui.add(text, 'start').name('Start');
     var resetBtn = gui.add(text, 'reset').name('Reset');
+    var compVisBtn = gui.add(text, 'compVis').name('Compute Visibility');
     startBtn.onChange(function (value) {
         console.log("test: " + startBtn.__li.firstElementChild.firstElementChild.innerHTML);
         var value = startBtn.__li.firstElementChild.firstElementChild.innerHTML;
@@ -292,4 +312,76 @@ window.onload = function () {
         // Fires on every change, drag, keypress, etc.
         startBtn.name('Start');
     });
+    compVisBtn.onChange(function (value) {
+        var value = compVisBtn.__li.firstElementChild.firstElementChild.innerHTML;
+        if (value == 'Compute Visibility') {
+            compVisBtn.name('Remove Visibility');
+        } else {
+            compVisBtn.name('Compute Visibility');
+            removeRC = true;
+        }
+    });
 };
+
+var radius = 1000, theta = 0;
+function rayCast() {
+    raycaster = new THREE.Raycaster();
+    var direction = new THREE.Vector3(150, 0, 450);
+    var startPoint = new THREE.Vector3(600, 300, -400);
+
+    for (i = 0; i < 360; i+=0.1) {
+        direction.x = radius * Math.sin(THREE.MathUtils.degToRad(i));
+        direction.z = radius * Math.cos(THREE.MathUtils.degToRad(i));
+        direction.normalize();
+
+        raycaster.set(startPoint, direction);
+        var intersects = raycaster.intersectObjects(scene.children);
+
+        if (intersects[0]) {
+            console.log(intersects[0]);
+
+            //arrow
+            var hex = 0xff0000;
+            var arrowHelper = new THREE.ArrowHelper(direction, startPoint, intersects[0].distance, hex);
+            scene.add(arrowHelper);
+
+            intersects[0].object.material.color.setHex(hex);
+        }
+    }
+    /*theta += 0.1;
+
+    direction.x = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+    //camera.position.y = radius * Math.sin(THREE.MathUtils.degToRad(theta));
+    direction.z = radius * Math.cos(THREE.MathUtils.degToRad(theta));
+    direction.normalize();
+    var startPoint = new THREE.Vector3(0, 300, -400);
+    raycaster.set(startPoint, direction);
+    var intersects = raycaster.intersectObjects(scene.children);
+
+    if (intersects[0]) {
+        console.log(intersects[0]);
+        intersects[0].object.material.color.setHex(0xff0000);
+    }*/
+
+
+
+    /*if (intersects.length > 0) {
+
+        if (INTERSECTED != intersects[0].object) {
+
+            if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+
+            INTERSECTED = intersects[0].object;
+            INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+            INTERSECTED.material.emissive.setHex(0xff0000);
+
+        }
+
+    } else {
+
+        if (INTERSECTED) INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+
+        INTERSECTED = null;
+
+    }*/
+}
