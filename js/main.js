@@ -7,6 +7,7 @@ var plotArr;
 
 function init() {
 
+    // camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000)
     camera.position.x = 1000;
     camera.position.y = 1000;
@@ -46,9 +47,9 @@ function init() {
         var posz = 0;
         var j = 1;
         while (posz < 725) {
-            console.log("posz" + posz);    
+            console.log("posz" + posz);
             var ht = 300;
-            if (posx > 400 && posz <400) {
+            if (posx > 400 && posz < 400) {
                 ht *= 1.5;
             }
             if (posx > 100 && posx < 300 && posz > 200 && posz < 500) {
@@ -107,7 +108,7 @@ function init() {
         geometry = new THREE.BoxGeometry(300, ht, len);
         material = new THREE.MeshLambertMaterial({ color: 0xffebad });
         mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(-550, (ht/2)+0.5, 500 - (500 * i) );
+        mesh.position.set(-550, (ht / 2) + 0.5, 500 - (500 * i));
         mesh.receiveShadow = true;
         mesh.castShadow = true;
         scene.add(mesh);
@@ -151,11 +152,11 @@ function animate() {
     //if (!isPlay) return;
     requestAnimationFrame(animate);
     if (isPlay && light.position.x > -450) {
-        light.position.x -= 1;
+        light.position.x -= 0.75;
     }
 
     controls.update();
-    
+
     render();
 }
 
@@ -189,7 +190,7 @@ var Utilities = function () {
             runAnim = true;
         }
         // Start and Pause 
-        if (runAnim) {       
+        if (runAnim) {
             runAnim = false;
             isPlay = true;
             animate();
@@ -287,27 +288,11 @@ function rayCast() {
     }
     return hitObjects.length;
 }
-    function rayCastGeneral(direction, startPoint) {
-        raycaster = new THREE.Raycaster();
-        direction.normalize();
-        raycaster.set(startPoint, direction);
-        return raycaster.intersectObjects(scene.children);
-
-            /*if (intersects[0]) {
-                var objectId = intersects[0].object.uuid;
-                console.log(objectId);
-                if (hitObjects.length > 0 && hitObjects.find(element => element == objectId)) {
-                    continue;
-                }
-                hitObjects.push(objectId);
-
-                //arrow
-                var hex = 0xff0000;
-                var arrowHelper = new THREE.ArrowHelper(direction, startPoint, intersects[0].distance, hex);
-                scene.add(arrowHelper);
-
-                intersects[0].object.material.color.setHex(hex);
-            }*/
+function rayCastGeneral(direction, startPoint) {
+    raycaster = new THREE.Raycaster();
+    direction.normalize();
+    raycaster.set(startPoint, direction);
+    return raycaster.intersectObjects(scene.children);
 }
 
 function initPlotArray() {
@@ -316,8 +301,6 @@ function initPlotArray() {
 initPlotArray();
 function castParkRays() {
     var y = 1.50000001;
-    //var shadowPoints = [];
-    //var arr = new Array(121).fill(0);
     console.log(plotArr.length);
     var startDirection = new THREE.Vector3(lightStartDefault.x, lightStartDefault.y, lightStartDefault.z);
     console.log("test1: " + lightStartDefault.x);
@@ -325,15 +308,12 @@ function castParkRays() {
         var direction = new THREE.Vector3(startDirection.x, startDirection.y, startDirection.z);
         console.log("test1: " + direction.x);
         var i = 0;
-        //for (x = -35; x <= 515; x += 55) {
-            //for (z = -725; z <= -75; z += 65) {
         for (x = 515; x >= -35; x -= 55) {
-        for (z = -75; z >= -725; z -= 65) {    
-            var startPoint = new THREE.Vector3(x, y, z);
-            var intersects = rayCastGeneral(direction, startPoint);
-            if (intersects[0]) {
-                //shadowPoints.push({ x: x, y: y, z: z });
-                plotArr[i] += 1; 
+            for (z = -75; z >= -725; z -= 65) {
+                var startPoint = new THREE.Vector3(x, y, z);
+                var intersects = rayCastGeneral(direction, startPoint);
+                if (intersects[0]) {
+                    plotArr[i] += 1;
                 }
                 i++;
             }
@@ -343,20 +323,6 @@ function castParkRays() {
     console.log(plotArr);
     heatMap();
 }
-
-/*function test() {
-
-    var startPoint = new THREE.Vector3(515, 1, -75);
-    var direction = lightStartDefault;
-    var intersects = rayCastGeneral(direction, startPoint);
-    //arrow
-    var hex = 0xff0000;
-    var arrowHelper = new THREE.ArrowHelper(direction, startPoint, 1000, hex);
-    scene.add(arrowHelper);
-    render();
-}*/
-
-/*test();*/
 
 function heatMap() {
     var points = [];
@@ -368,15 +334,15 @@ function heatMap() {
     while (points.length) {
         shadowPoints.push(points.splice(0, 11));
     }
-var data = [
-    {
-        z: shadowPoints,
-        x: [0, 55, 110, 165, 220, 275, 330, 385, 440, 495, 550],
-        y: [0, 65, 130, 195, 260, 325, 390, 455, 520, 585, 650],
-        type: 'heatmap',
-        hoverongaps: false
-  }
-];
+    var data = [
+        {
+            z: shadowPoints,
+            x: [0, 55, 110, 165, 220, 275, 330, 385, 440, 495, 550],
+            y: [0, 65, 130, 195, 260, 325, 390, 455, 520, 585, 650],
+            type: 'heatmap',
+            hoverongaps: false
+        }
+    ];
 
-Plotly.newPlot('myDiv', data);
+    Plotly.newPlot('myDiv', data);
 }
