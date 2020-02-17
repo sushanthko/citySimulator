@@ -2,6 +2,8 @@
 var camera, scene, renderer, light, raycaster;
 var geometry, material, mesh, meshFloor, controls;
 var USE_WIREFRAME = false;
+var lightStartDefault = new THREE.Vector3(450, 600, -0);
+var plotArr;
 
 function init() {
 
@@ -117,7 +119,7 @@ function init() {
     scene.add(new THREE.AmbientLight(0x404040));
 
     light = new THREE.DirectionalLight(0xffffff, 0.5);
-    light.position.set(450, 600, -0);
+    light.position.set(lightStartDefault);
 
     light.castShadow = true;
 
@@ -149,7 +151,7 @@ function animate() {
     //if (!isPlay) return;
     requestAnimationFrame(animate);
     if (isPlay && light.position.x > -450) {
-        light.position.x -= 0.05;
+        light.position.x -= 1;
     }
 
     controls.update();
@@ -158,7 +160,7 @@ function animate() {
 }
 
 function render() {
-    if (!isPlay) {
+    if (initAnim) {
         light.position.set(450, 600, -0);
     }
     renderer.render(scene, camera);
@@ -194,9 +196,11 @@ var Utilities = function () {
         } else {
             runAnim = true;
             isPlay = false;
+            castParkRays();
         }
     };
     this.reset = function () {
+        initPlotArray();
         initAnim = true;
         runAnim = false;
         isPlay = false;
@@ -204,7 +208,8 @@ var Utilities = function () {
     };
     this.compVis = function () {
         if (!removeRC) {
-            rayCast();
+            var hits = rayCast();
+            alert("Number of hits: " + hits);
             render();
         } else {
             document.location.reload();
@@ -223,12 +228,15 @@ window.onload = function () {
         var value = startBtn.__li.firstElementChild.firstElementChild.innerHTML;
         // Fires on every change, drag, keypress, etc.
         if (value == 'Stop') {
+            document.getElementById("myDiv").style.display = 'block';
             startBtn.name('Resume');
         } else {
+            document.getElementById("myDiv").style.display = 'none';
             startBtn.name('Stop');
         }
     });
     resetBtn.onChange(function (value) {
+        document.getElementById("myDiv").style.display = 'none';
         startBtn.name('Start');
     });
     compVisBtn.onChange(function (value) {
@@ -249,28 +257,126 @@ function rayCast() {
     var startPoint = new THREE.Vector3(600, 300, -400);
     var hitObjects = [];
 
-    for (i = 0; i < 360; i+=0.1) {
-        direction.x = radius * Math.sin(THREE.MathUtils.degToRad(i));
-        direction.z = radius * Math.cos(THREE.MathUtils.degToRad(i));
-        direction.normalize();
+    for (j = 300; j <= 600; j += 100) {
+        for (i = 0; i < 360; i += 0.1) {
+            direction.x = radius * Math.sin(THREE.MathUtils.degToRad(i));
+            direction.z = radius * Math.cos(THREE.MathUtils.degToRad(i));
+            direction.normalize();
 
-        raycaster.set(startPoint, direction);
-        var intersects = raycaster.intersectObjects(scene.children);
+            startPoint.y = j;
 
-        if (intersects[0]) {
-            var objectId = intersects[0].object.uuid;
-            console.log(objectId);
-            if (hitObjects.length > 0 && hitObjects.find(element => element == objectId)) {
-                continue;
+            raycaster.set(startPoint, direction);
+            var intersects = raycaster.intersectObjects(scene.children);
+
+            if (intersects[0]) {
+                var objectId = intersects[0].object.uuid;
+                console.log(objectId);
+                if (hitObjects.length > 0 && hitObjects.find(element => element == objectId)) {
+                    continue;
+                }
+                hitObjects.push(objectId);
+
+                //arrow
+                var hex = 0xff0000;
+                var arrowHelper = new THREE.ArrowHelper(direction, startPoint, intersects[0].distance, hex);
+                scene.add(arrowHelper);
+
+                intersects[0].object.material.color.setHex(hex);
             }
-            hitObjects.push(objectId);
-
-            //arrow
-            var hex = 0xff0000;
-            var arrowHelper = new THREE.ArrowHelper(direction, startPoint, intersects[0].distance, hex);
-            scene.add(arrowHelper);
-
-            intersects[0].object.material.color.setHex(hex);
         }
     }
+    return hitObjects.length;
+}
+    function rayCastGeneral(direction, startPoint) {
+        raycaster = new THREE.Raycaster();
+        direction.normalize();
+        raycaster.set(startPoint, direction);
+        return raycaster.intersectObjects(scene.children);
+
+            /*if (intersects[0]) {
+                var objectId = intersects[0].object.uuid;
+                console.log(objectId);
+                if (hitObjects.length > 0 && hitObjects.find(element => element == objectId)) {
+                    continue;
+                }
+                hitObjects.push(objectId);
+
+                //arrow
+                var hex = 0xff0000;
+                var arrowHelper = new THREE.ArrowHelper(direction, startPoint, intersects[0].distance, hex);
+                scene.add(arrowHelper);
+
+                intersects[0].object.material.color.setHex(hex);
+            }*/
+}
+
+function initPlotArray() {
+    plotArr = new Array(121).fill(0);
+}
+initPlotArray();
+function castParkRays() {
+    var y = 1.50000001;
+    //var shadowPoints = [];
+    //var arr = new Array(121).fill(0);
+    console.log(plotArr.length);
+    var startDirection = new THREE.Vector3(lightStartDefault.x, lightStartDefault.y, lightStartDefault.z);
+    console.log("test1: " + lightStartDefault.x);
+    while (startDirection.x >= light.position.x) {
+        var direction = new THREE.Vector3(startDirection.x, startDirection.y, startDirection.z);
+        console.log("test1: " + direction.x);
+        var i = 0;
+        //for (x = -35; x <= 515; x += 55) {
+            //for (z = -725; z <= -75; z += 65) {
+        for (x = 515; x >= -35; x -= 55) {
+        for (z = -75; z >= -725; z -= 65) {    
+            var startPoint = new THREE.Vector3(x, y, z);
+            var intersects = rayCastGeneral(direction, startPoint);
+            if (intersects[0]) {
+                //shadowPoints.push({ x: x, y: y, z: z });
+                plotArr[i] += 1; 
+                }
+                i++;
+            }
+        }
+        startDirection.x -= 1;
+    }
+    console.log(plotArr);
+    heatMap();
+}
+
+/*function test() {
+
+    var startPoint = new THREE.Vector3(515, 1, -75);
+    var direction = lightStartDefault;
+    var intersects = rayCastGeneral(direction, startPoint);
+    //arrow
+    var hex = 0xff0000;
+    var arrowHelper = new THREE.ArrowHelper(direction, startPoint, 1000, hex);
+    scene.add(arrowHelper);
+    render();
+}*/
+
+/*test();*/
+
+function heatMap() {
+    var points = [];
+    for (i = 0; i < plotArr.length; i++) {
+        points[i] = plotArr[i];
+    }
+    console.log(points);
+    var shadowPoints = [];
+    while (points.length) {
+        shadowPoints.push(points.splice(0, 11));
+    }
+var data = [
+    {
+        z: shadowPoints,
+        x: [0, 55, 110, 165, 220, 275, 330, 385, 440, 495, 550],
+        y: [0, 65, 130, 195, 260, 325, 390, 455, 520, 585, 650],
+        type: 'heatmap',
+        hoverongaps: false
+  }
+];
+
+Plotly.newPlot('myDiv', data);
 }
