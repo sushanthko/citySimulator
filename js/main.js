@@ -1,7 +1,9 @@
 // JavaScript source code
 var camera, scene, renderer, light, raycaster;
 var geometry, material, mesh, controls, texture, materials, font;
-var lightStartDefault = new THREE.Vector3(450, 600, -0);
+//var lightStartDefault = new THREE.Vector3(450, 600, -0);
+var angleFactor = 1 / 15;
+var lightStartDefault = new THREE.Vector3(1000 * Math.cos(angleFactor * Math.PI), 1000 * Math.sin(angleFactor * Math.PI), -0);
 var plotArr;
 var MAX_HEIGHT = 15;
 var scale = chroma.scale(['blue','green','red']).domain([0,MAX_HEIGHT]);
@@ -289,11 +291,17 @@ function animate() {
     //console.log(runAnim)
     //if (!isPlay) return;
     requestAnimationFrame(animate);
-    if (isPlay && light.position.x > -450) {
+    // if (isPlay && light.position.x > -450) {
+    if (isPlay && angleFactor<=14/15) {
+        console.log("x: "+angleFactor);
         if(isShowIntensity) {
             TWEEN.update();
         }
-        light.position.x -= 0.75;
+        // light.position.x -= 0.75;
+        // light.position.x = 5000*Math.cos(x*Math.PI);
+        // light.position.y = 5000*Math.sin(x*Math.PI);
+        angleFactor += 1 / 1500;
+        light.position.set(1000 * Math.cos(angleFactor * Math.PI), 1000 * Math.sin(angleFactor * Math.PI), 0);
     }
 
     controls.update();
@@ -303,7 +311,9 @@ function animate() {
 
 function render() {
     if (initAnim) {
-        light.position.set(450, 600, -0);
+        //light.position.set(450, 600, -0);
+        angleFactor = 0;
+        light.position.set(1000*Math.cos(angleFactor*Math.PI), 1000*Math.sin(angleFactor*Math.PI), 0);
     }
     renderer.render(scene, camera);
 }
@@ -330,7 +340,7 @@ var isSkyVisibility = false;
 
 var Utilities = function () {
     this.start = function () {
-        showIntensity();
+        // showIntensity();
         if (initAnim) {
             initAnim = false;
             runAnim = true;
@@ -339,6 +349,9 @@ var Utilities = function () {
         if (runAnim) {
             runAnim = false;
             isPlay = true;
+            if(isShowIntensity) {
+                showIntensity();
+            }
             animate();
         } else {
             runAnim = true;
@@ -533,12 +546,14 @@ function castParkRays() {
     console.log(plotArr.length);
     var startDirection = new THREE.Vector3(lightStartDefault.x, lightStartDefault.y, lightStartDefault.z);
     console.log("test1: " + lightStartDefault.x);
-    while (startDirection.x >= light.position.x) {
+    var j = 1/15;
+    //while (startDirection.x >= light.position.x) {
+    while (j<=angleFactor) {
         var direction = new THREE.Vector3(startDirection.x, startDirection.y, startDirection.z);
         console.log("test1: " + direction.x);
         var i = 0;
-        for (x = 515; x >= -35; x -= 55) {
-            for (z = -75; z >= -725; z -= 65) {
+        for (var x = 515; x >= -35; x -= 55) {
+            for (var z = -75; z >= -725; z -= 65) {
                 var startPoint = new THREE.Vector3(x, y, z);
                 var intersects = rayCastGeneral(direction, startPoint);
                 if (intersects[0]) {
@@ -547,7 +562,9 @@ function castParkRays() {
                 i++;
             }
         }
-        startDirection.x -= 0.75;
+        //startDirection.x -= 0.75;
+        j += 1/150;
+        startDirection.set(1000*Math.cos(j*Math.PI), 1000*Math.sin(j*Math.PI), 0);
     }
     console.log(plotArr);
     heatMap();
@@ -606,22 +623,22 @@ function removeIntensity() {
 function getIntensity(vector) {
 
 // map to normalized device coordinate (NDC) space
-    vector.project( camera );
+    vector.project(camera);
 
 // map to 2D screen space
-    var x = Math.round( (   vector.x + 1 ) * renderer.domElement.width  / 2 );
-    var y = Math.round( ( - vector.y + 1 ) * renderer.domElement.height / 2 );
+    var x = Math.round((vector.x + 1) * renderer.domElement.width / 2);
+    var y = Math.round((-vector.y + 1) * renderer.domElement.height / 2);
 
     var offscreenCanvas = document.createElement("canvas");
     offscreenCanvas.width = renderer.domElement.width;
     offscreenCanvas.height = renderer.domElement.height;
     var ctx = offscreenCanvas.getContext("2d");
 
-    ctx.drawImage(renderer.domElement,0,0);
-    var imageData = ctx.getImageData(x,y, 1, 1);
+    ctx.drawImage(renderer.domElement, 0, 0);
+    var imageData = ctx.getImageData(x, y, 1, 1);
     var c = imageData.data;
-    c = [c[0], c[1],c[2]];
-    var intensity = (65536 * c[0] + 256 * c[1] + c[2])/16777216;
+    c = [c[0], c[1], c[2]];
+    var intensity = (65536 * c[0] + 256 * c[1] + c[2]) / 16777216;
 
     return intensity;
 }
@@ -639,13 +656,13 @@ function displayIntensityBar(vector, number) {
     var from = new THREE.Vector3(position.x, position.y, position.z);
     var to = new THREE.Vector3(position.x, position.y, position.z);
     var direction = to.clone().sub(from);
-    var length = direction.length();
-    var arrowHelper = new THREE.ArrowHelper(direction.normalize(), from, getScaledIntensity(getScaledIntensity(position)), 0x00ff00);
+    // var length = direction.length();
+    var arrowHelper = new THREE.ArrowHelper(direction.normalize(), from, getScaledIntensity(getIntensity(position)), 0x00ff00);
     arrowHelper.name = 'arrow' + number;
     scene.add(arrowHelper);
 }
 
-function setIntensityText(vector, number) { // Unused
+/*function setIntensityText(vector, number) { // Unused
     var position = new THREE.Vector3(vector.x, vector.y, vector.z);
     var intensity = getIntensity(vector);
     mesh = scene.getObjectByName("intensity"+number);
@@ -674,16 +691,14 @@ function setIntensityText(vector, number) { // Unused
         scene.add( mesh );
     } );
 
-}
+}*/
 
 var buildUp = function () {
     var vector = new THREE.Vector3();
-    showIntensity();
+    //showIntensity();
     return new TWEEN.Tween({
-        scale: 1
     }).to({
-        scale: 3
-    }, 2000).onUpdate(function () {
+    }, 1000).onUpdate(function () {
         vector.set(-225, 1, 0); // bridge
         scene.getObjectByName("arrow1").setLength(getScaledIntensity(getIntensity(vector)));
         //setIntensityText(vector, 1);
@@ -698,10 +713,8 @@ var buildUp = function () {
 var buildDown = function () {
     var vector = new THREE.Vector3();
     return new TWEEN.Tween({
-        scale: 3
     }).to({
-        scale: 1
-    }, 2000).onUpdate(function () {
+    }, 1000).onUpdate(function () {
         //arrowHelper.setLength(100);
         vector.set(-225, 1, 0); // bridge
         scene.getObjectByName("arrow1").setLength(getScaledIntensity(getIntensity(vector)));
