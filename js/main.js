@@ -30,16 +30,16 @@ function init() {
     geometry = new THREE.BoxGeometry(900, 1, 1500);
     //material = new THREE.MeshLambertMaterial({color:0x676767, side: THREE.DoubleSide});
     //material = new THREE.MeshLambertMaterial({ color: 0xe8e8e8 });
-    texture = new THREE.TextureLoader().load( "assets/textures/street.jpg" );
+    texture = new THREE.TextureLoader().load("assets/textures/street.jpg");
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set( 8, 8 );
+    texture.repeat.set(8, 8);
     materials =
         [
             new THREE.MeshLambertMaterial({map: texture}), // RIGHT SIDE
             new THREE.MeshLambertMaterial({map: texture}), // LEFT SIDE
-            new THREE.MeshLambertMaterial({map: texture }), // TOP SIDE
-            new THREE.MeshLambertMaterial({map: texture }), // BOTTOM SIDE
+            new THREE.MeshLambertMaterial({map: texture}), // TOP SIDE
+            new THREE.MeshLambertMaterial({map: texture}), // BOTTOM SIDE
             new THREE.MeshLambertMaterial({map: texture}), // FRONT SIDE
             new THREE.MeshLambertMaterial({map: texture}) // BACK SIDE
         ];
@@ -161,15 +161,15 @@ function init() {
     //landmark
     geometry = new THREE.CylinderGeometry(20, 20, 600, 32);
     //material = new THREE.MeshLambertMaterial({ color: 0xcccccc });
-    texture = new THREE.TextureLoader().load( "assets/textures/pillar.jpg" );
+    texture = new THREE.TextureLoader().load("assets/textures/pillar.jpg");
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set( 4, 4 );
+    texture.repeat.set(4, 4);
     materials =
         [
-            new THREE.MeshLambertMaterial({map:texture}), // CURVED FACE
+            new THREE.MeshLambertMaterial({map: texture}), // CURVED FACE
             new THREE.MeshLambertMaterial({color: 0xcccccc}), // TOP
-            new THREE.MeshLambertMaterial({color: 0xcccccc }) // BOTTOM
+            new THREE.MeshLambertMaterial({color: 0xcccccc}) // BOTTOM
         ];
     mesh = new THREE.Mesh(geometry, materials);
     mesh.name="landmark1";
@@ -356,11 +356,14 @@ var Utilities = function () {
         } else {
             runAnim = true;
             isPlay = false;
-            castParkRays();
+            // castParkRays();
+            // computeCFH();
+            computeHistogram();
         }
     };
     this.reset = function () {
         initPlotArray();
+        initCFHArray();
         initAnim = true;
         runAnim = false;
         isPlay = false;
@@ -541,6 +544,7 @@ function initPlotArray() {
     plotArr = new Array(121).fill(0);
 }
 initPlotArray();
+
 function castParkRays() {
     var y = 1.50000001;
     console.log(plotArr.length);
@@ -570,6 +574,105 @@ function castParkRays() {
     heatMap();
 }
 
+var cfhArr;
+
+function initCFHArray() {
+    cfhArr = new Array(3696).fill({prev: 0, curr: 0, change: 0});
+}
+
+initCFHArray();
+
+function computeCFH() {
+    var y = 1.50000001;
+    var startDirection = new THREE.Vector3(lightStartDefault.x, lightStartDefault.y, lightStartDefault.z);
+    var j = 1 / 15;
+
+    while (j <= angleFactor) {
+        var direction = new THREE.Vector3(startDirection.x, startDirection.y, startDirection.z);
+        var i = 0;
+        for (var x = 515; x >= -35; x -= 10) {
+            for (var z = -75; z >= -725; z -= 10) {
+                // console.log("x,y: "+x+","+z);
+                var startPoint = new THREE.Vector3(x, y, z);
+                var intersects = rayCastGeneral(direction, startPoint);
+                // console.log("1: " + cfhArr[i].prev + "  : " + cfhArr[i].curr + " : " + cfhArr[i].change);
+                var change = cfhArr[i].change;
+                var prev = cfhArr[i].curr;
+                var curr;
+                if (intersects[0]) {
+                    curr = 1;
+                } else {
+                    curr = 0;
+                }
+                if (prev !== curr) {
+                    change++;
+                }
+                cfhArr[i] = {prev: prev, curr: curr, change: change};
+                // console.log("2: " + cfhArr[i].prev + "  : " + cfhArr[i].curr + " : " + cfhArr[i].change);
+                i++;
+
+            }
+        }
+        // console.log("i: "+i);
+        // console.log(cfhArr)
+        j += 1 / 150;
+        startDirection.set(1000 * Math.cos(j * Math.PI), 1000 * Math.sin(j * Math.PI), 0);
+    }
+    // console.log(cfhArr);
+    cfh();
+}
+
+var hgArr;
+
+function initHGArray() {
+    hgArr = new Array(14).fill(0);
+}
+
+initHGArray();
+
+function computeHistogram() {
+    var y = 1.50000001;
+    var startDirection = new THREE.Vector3(lightStartDefault.x, lightStartDefault.y, lightStartDefault.z);
+    var j = 1 / 15;
+
+    while (j <= angleFactor) {
+        var direction = new THREE.Vector3(startDirection.x, startDirection.y, startDirection.z);
+        var i = 0, count = 0;
+        for (var x = 515; x >= -35; x -= 10) {
+            for (var z = -75; z >= -725; z -= 10) {
+                // console.log("x,y: "+x+","+z);
+                var startPoint = new THREE.Vector3(x, y, z);
+                var intersects = rayCastGeneral(direction, startPoint);
+                if (intersects[0]) {
+                   count++;
+                }
+                i++;
+
+            }
+        }
+        hgArr[(j - 1 / 15) * 15] = Math.round(count * 100 / i); //Percentage of shadow area at different hours
+        j += 1 / 15;
+        startDirection.set(1000 * Math.cos(j * Math.PI), 1000 * Math.sin(j * Math.PI), 0);
+    }
+    // console.log(cfhArr);
+    histogram();
+}
+
+function histogram() {
+    var points = [];
+    for (var i = 0; i < hgArr.length; i++) {
+        points[i] = hgArr[i];
+    }
+    console.log(points);
+
+    var trace = {
+        x: points,
+        type: 'histogram',
+    };
+    var data = [trace];
+    Plotly.newPlot('myDiv', data);
+}
+
 function heatMap() {
     var points = [];
     for (i = 0; i < plotArr.length; i++) {
@@ -585,6 +688,39 @@ function heatMap() {
             z: shadowPoints,
             x: [0, 27.5, 55, 82.5, 110, 137.5, 165, 192.5, 220, 247.5, 275, 302.5, 330, 357.5, 385, 412.5, 440, 467.5, 495, 522.5, 550],
             y: [0, 32.5, 65, 97.5, 130, 162.5, 195, 227.5, 260, 292.5, 325, 357.5, 390, 422.5, 455, 487.5, 520, 552.5, 585, 617.5, 650],
+            type: 'heatmap',
+            hoverongaps: false
+        }
+    ];
+
+    Plotly.newPlot('myDiv', data);
+}
+
+function cfh() {
+    var points = [];
+    for (var i = 0; i < cfhArr.length; i++) {
+        points[i] = cfhArr[i].change;
+    }
+    //console.log(points);
+    var changeFrequencies = [];
+    while (points.length) {
+        // console.log(points.length);
+        changeFrequencies.push(points.splice(0, 66));
+    }
+    // console.log(changeFrequencies);
+    var xA = [];
+    for (var j = 0; j <= 650; j += 10) {
+        xA.push(j)
+    }
+    var yA = [];
+    for (var k = 0; k <= 550; k += 10) {
+        yA.push(k)
+    }
+    var data = [
+        {
+            z: changeFrequencies,
+            x: xA,
+            y: yA,
             type: 'heatmap',
             hoverongaps: false
         }
